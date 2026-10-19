@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#e9e8e3">
-  <meta name="description" content="A deliberately imperfect pixel arcade. Fly, shoot, break things, then fix them on GitHub.">
-  <title>Rasteroids — Small pixels. Big problems.</title>
+  <meta name="description" content="The orbital arcade. Create a pilot account, save your flights, and climb the Rasteroids leaderboard.">
+  <title>Rasteroids — The orbital arcade</title>
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23191919'/%3E%3Cpath d='M16 5 27 27 16 22 5 27Z' fill='%23e9e8e3'/%3E%3C/svg%3E">
   <style>
     :root { color-scheme: light; --paper: #e9e8e3; --ink: #232421; --muted: #777972; --line: #c5c6bd; }
@@ -61,17 +61,20 @@
       .page { padding: 18px 17px; } .topline { font-size: 9px; letter-spacing: .6px; } .intro { padding: 25px 0; align-items: start; flex-direction: column; gap: 13px; } .intro-copy { text-align: left; font-size: 11px; } h1 { letter-spacing: -2px; } .telemetry { padding: 12px; } .stats { gap: 18px; } .stat strong { font-size: 16px; } .stat small { font-size: 8px; } .machine-buttons button { padding: 8px; font-size: 9px; } .restart-label { display: none; } .controls { grid-template-columns: 1fr 1fr; gap: 22px; } .overlay .overline { margin-bottom: 12px; font-size: 8px; } .overlay h2 { margin-bottom: 8px; } .overlay .description { font-size: 10px; margin-bottom: 15px; } .launch { padding: 12px 18px; font-size: 10px; } .overlay .hint { font-size: 8px; margin-top: 13px; } .bottom-rail { padding: 10px; font-size: 8px; letter-spacing: 0; } footer { flex-direction: column; gap: 8px; }
     }
   </style>
+  <link rel="stylesheet" href="/web.css">
 </head>
 <body>
   <main class="page">
     <header class="topline">
       <div class="brand"><span class="brand-mark" aria-hidden="true">R</span> INDEPENDENT ORBITAL ARCADE</div>
-      <span class="build"><span class="dot"></span> TRAINING BUILD / V.0.1</span>
+      <div class="account-nav"><span class="build"><span class="dot"></span> ONLINE ARCADE / V.1.0</span><button id="account-button" class="outline-button" type="button">SIGN IN / JOIN →</button><button id="logout-button" class="text-button" type="button" hidden>SIGN OUT</button></div>
     </header>
     <section class="intro" aria-labelledby="title">
-      <div><p class="eyebrow">INSERT CURIOSITY. PRESS START.</p><h1 id="title">RASTEROIDS</h1></div>
-      <p class="intro-copy">Small pixels. Big problems.<br>A beautifully broken little space game.</p>
+      <div><p class="eyebrow">YOUR NEXT HIGH SCORE STARTS HERE.</p><h1 id="title">RASTEROIDS</h1></div>
+      <p class="intro-copy">Small pixels. Big problems.<br>One ship. Endless rocks. Your place in orbit.</p>
     </section>
+    <div class="arcade-layout">
+    <div class="play-column">
     <section class="machine" aria-label="Rasteroids arcade game">
       <div class="telemetry">
         <div class="stats">
@@ -85,35 +88,115 @@
         </div>
       </div>
       <div class="viewport">
-        <canvas id="game" width="480" height="300" tabindex="0" aria-label="Asteroids playfield. Use left and right arrows to rotate, up to thrust, Space to fire, P to pause, and R to restart.">This game requires a browser with HTML canvas and JavaScript enabled.</canvas>
+        <canvas id="game" width="480" height="300" tabindex="0" aria-label="Asteroids playfield. Use the touch controls below, or left and right arrows to rotate, up to thrust, Space to fire, P to pause, and R to restart.">This game requires a browser with HTML canvas and JavaScript enabled.</canvas>
         <div class="scanlines" aria-hidden="true"></div>
         <div class="overlay" id="overlay">
           <p class="overline" id="overline">480 × 300 / ALL SYSTEMS QUESTIONABLE</p>
           <h2 id="overlay-title">READY, PILOT?</h2>
           <p class="description" id="overlay-description">Clear the rocks. Keep your ship.<br>Try not to become space dust.</p>
           <button class="launch" id="launch" type="button">LAUNCH GAME →</button>
-          <p class="hint" id="overlay-hint">OR PRESS ENTER · KEYBOARD REQUIRED</p>
+          <p class="hint" id="overlay-hint">TOUCH CONTROLS OR KEYBOARD · ENTER TO START</p>
+        </div>
+      </div>
+      <div class="touch-controls" role="group" aria-label="Touch game controls">
+        <div class="touch-group">
+          <button id="touch-left" class="touch-button" type="button" aria-label="Rotate left" aria-pressed="false" disabled><span aria-hidden="true">↶</span><small>LEFT</small></button>
+          <button id="touch-right" class="touch-button" type="button" aria-label="Rotate right" aria-pressed="false" disabled><span aria-hidden="true">↷</span><small>RIGHT</small></button>
+        </div>
+        <div class="touch-group">
+          <button id="touch-thrust" class="touch-button" type="button" aria-label="Thrust" aria-pressed="false" disabled><span aria-hidden="true">↑</span><small>THRUST</small></button>
+          <button id="touch-fire" class="touch-button touch-fire" type="button" aria-label="Fire" aria-pressed="false" disabled><span aria-hidden="true">✳</span><small>FIRE</small></button>
         </div>
       </div>
       <div class="bottom-rail"><span class="live"><span class="dot"></span><span id="status" role="status">AWAITING PILOT</span></span><span><span id="fps">--</span> FPS · 480 × 300 · MONO</span><span>BEST <span id="best">000000</span></span></div>
     </section>
+    <div class="flight-notice"><span id="save-status" role="status">Guest flight · Sign in before launch to save your score.</span><button id="retry-save" class="text-button" type="button" hidden>RETRY SAVE ↻</button></div>
     <section class="controls" aria-label="Keyboard controls">
       <div class="control"><span class="keys"><kbd>←</kbd><kbd>→</kbd></span><div><strong>ROTATE</strong><small>Find your heading</small></div></div>
       <div class="control"><kbd>↑</kbd><div><strong>THRUST</strong><small>A little momentum</small></div></div>
       <div class="control"><kbd>SPACE</kbd><div><strong>FIRE</strong><small>Make smaller rocks</small></div></div>
       <div class="control"><kbd>P</kbd><div><strong>PAUSE</strong><small>Take a breather</small></div></div>
     </section>
-    <footer><p>BUILT TO PLAY. BROKEN TO LEARN.<br>An intentionally imperfect playground for GitHub & coding agents.</p><p><a href="https://github.com/Akkowicz/rasteroids/issues" target="_blank" rel="noopener noreferrer">EXPLORE THE ISSUE QUEUE ↗</a><br>NO INSTALLS. NO DEPENDENCIES. JUST PIXELS.</p></footer>
+    </div>
+    <aside class="pilot-sidebar" aria-label="Pilot profile and leaderboard">
+      <section class="pilot-card">
+        <p class="eyebrow">01 / PILOT RECORD</p>
+        <div class="pilot-heading"><span class="pilot-avatar" aria-hidden="true">△</span><div><h2 id="pilot-name">GUEST PILOT</h2><p id="pilot-caption">Every legend starts at zero.</p></div></div>
+        <div class="pilot-stats"><div><small>PERSONAL BEST</small><strong id="personal-best">—</strong></div><div><small>FLIGHTS LOGGED</small><strong id="flight-count">—</strong></div></div>
+        <button id="join-button" class="solid-button" type="button">CREATE YOUR PILOT →</button>
+        <p id="profile-note" class="fine-print">Save your scores. Make the board. Come back for more.</p>
+      </section>
+      <section class="leaderboard-card" aria-labelledby="leaderboard-title">
+        <div class="board-heading"><div><p class="eyebrow">02 / ORBITAL HONORS</p><h2 id="leaderboard-title">THE SCOREBOARD</h2></div><button id="refresh-board" class="text-button" type="button" aria-label="Refresh scoreboard">↻</button></div>
+        <div class="board-tabs" role="group" aria-label="Scoreboard view"><button id="global-tab" type="button" aria-pressed="true">ALL PILOTS</button><button id="history-tab" type="button" aria-pressed="false">MY FLIGHTS</button></div>
+        <div class="board-columns" aria-hidden="true"><span>PILOT / SECTOR</span><span>SCORE</span></div>
+        <ol id="scoreboard" class="scoreboard" aria-label="Scores"></ol>
+        <p id="board-message" class="board-message" role="status">Connecting to mission control…</p>
+        <p class="board-footnote" id="board-footnote">BEST FLIGHTS FIRST · UP TO 50 PILOTS</p>
+      </section>
+      <div class="orbit-note"><span aria-hidden="true">✳</span><p>Small pixels.<br>Big ambitions.<br><strong>See you on the board.</strong></p></div>
+    </aside>
+    </div>
+    <footer><p>BUILT TO PLAY. FLYING TOGETHER.<br>The independent orbital arcade. Est. 2026.</p><p><a href="https://github.com/SkyOne771/rasteroids" target="_blank" rel="noopener noreferrer">VIEW SOURCE ON GITHUB ↗</a><br>THREE SHIPS. ONE MORE TRY. JUST PIXELS.</p></footer>
   </main>
+  <dialog id="auth-dialog" aria-labelledby="auth-title">
+    <form id="auth-form">
+      <div class="dialog-top"><span class="eyebrow">RASTEROIDS / PILOT ACCESS</span><button id="close-auth" class="text-button" type="button" aria-label="Close account dialog">✕</button></div>
+      <h2 id="auth-title">WELCOME BACK.</h2>
+      <p id="auth-copy">Sign in to log your flights and chase your personal best.</p>
+      <label for="username">PILOT NAME</label><input id="username" name="username" autocomplete="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]{3,20}" aria-describedby="username-help"><small id="username-help">3–20 letters, numbers, or underscores. Public on the scoreboard.</small>
+      <label for="password">PASSWORD</label><input id="password" name="password" type="password" autocomplete="current-password" required minlength="10" maxlength="128" aria-describedby="password-help"><small id="password-help">10–128 characters. Keep it somewhere safe.</small>
+      <p id="auth-error" role="alert"></p>
+      <button id="auth-submit" class="solid-button" type="submit">SIGN IN →</button>
+      <button id="auth-switch" class="text-button auth-switch" type="button">NEW PILOT? CREATE AN ACCOUNT</button>
+    </form>
+  </dialog>
+  <script src="/account.js"></script>
   <script>
     'use strict';
-    // Workshop baseline: deliberate defects use LESSON tags. See README.md.
     const canvas = document.getElementById('game');
     const ctx = canvas.getContext('2d', { willReadFrequently: true });
     ctx.imageSmoothingEnabled = false;
     const W = canvas.width, H = canvas.height;
     const ui = Object.fromEntries(['score', 'sector', 'lives', 'pause', 'restart', 'overlay', 'overline', 'overlay-title', 'overlay-description', 'overlay-hint', 'launch', 'status', 'fps', 'best'].map(id => [id, document.getElementById(id)]));
     const keys = new Set();
+    const touchPointers = new Map();
+    const touchButtons = new Map([
+      ['ArrowLeft', document.getElementById('touch-left')],
+      ['ArrowRight', document.getElementById('touch-right')],
+      ['ArrowUp', document.getElementById('touch-thrust')],
+      ['Space', document.getElementById('touch-fire')],
+    ]);
+    const pressed = code => keys.has(code) || [...touchPointers.values()].some(pointer => pointer.code === code);
+    function clearInput() {
+      keys.clear();
+      for (const [id, { button }] of touchPointers) {
+        touchPointers.delete(id);
+        if (button.hasPointerCapture(id)) button.releasePointerCapture(id);
+      }
+      for (const button of touchButtons.values()) button.setAttribute('aria-pressed', 'false');
+    }
+    function syncTouchControls() {
+      for (const button of touchButtons.values()) button.disabled = state !== 'playing';
+    }
+    for (const [code, button] of touchButtons) {
+      button.addEventListener('pointerdown', event => {
+        if (state !== 'playing' || event.button !== 0) return;
+        event.preventDefault();
+        button.setPointerCapture(event.pointerId);
+        touchPointers.set(event.pointerId, { code, button });
+        button.setAttribute('aria-pressed', 'true');
+      });
+      const release = event => {
+        touchPointers.delete(event.pointerId);
+        if (button.hasPointerCapture(event.pointerId)) button.releasePointerCapture(event.pointerId);
+        button.setAttribute('aria-pressed', String([...touchPointers.values()].some(pointer => pointer.code === code)));
+      };
+      button.addEventListener('pointerup', release);
+      button.addEventListener('pointercancel', release);
+      button.addEventListener('lostpointercapture', release);
+      button.addEventListener('contextmenu', event => event.preventDefault());
+    }
     const random = (min, max) => min + Math.random() * (max - min);
     const wrap = (n, size) => (n % size + size) % size;
     const distance = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
@@ -148,23 +231,31 @@
       ui.launch.textContent = button; ui.overline.textContent = overline;
       ui['overlay-hint'].textContent = hint; ui.overlay.hidden = false;
     }
-    function startGame() {
-      // LESSON BUG-RESTART: score is accidentally kept from the previous run.
-      sector = 1; lives = 3; asteroids = []; bullets = []; particles = [];
-      cooldown = 0; waveDelay = 0; keys.clear(); resetShip(); spawnWave();
-      state = 'playing'; ui.overlay.hidden = true; ui.pause.disabled = false;
+    let launchPending = false;
+    async function startGame() {
+      if (launchPending) return;
+      launchPending = true;
+      if (window.rasteroidsAccount) {
+        ui.status.textContent = 'CHECKING PILOT';
+        await window.rasteroidsAccount.ready;
+      }
+      launchPending = false;
+      window.rasteroidsAccount?.beginRun();
+      score = 0; sector = 1; lives = 3; asteroids = []; bullets = []; particles = [];
+      cooldown = 0; waveDelay = 0; clearInput(); resetShip(); spawnWave();
+      state = 'playing'; syncTouchControls(); ui.overlay.hidden = true; ui.pause.disabled = false;
       ui.pause.innerHTML = 'Ⅱ <span class="restart-label">PAUSE</span>';
       ui.pause.setAttribute('aria-label', 'Pause game');
-      ui.status.textContent = 'FLIGHT IN PROGRESS'; updateHUD(); canvas.focus();
+      ui.status.textContent = 'FLIGHT IN PROGRESS'; updateHUD(); canvas.focus({ preventScroll: true });
     }
     function togglePause() {
       if (state !== 'playing' && state !== 'paused') return;
-      state = state === 'playing' ? 'paused' : 'playing'; keys.clear();
+      state = state === 'playing' ? 'paused' : 'playing'; clearInput(); syncTouchControls();
       ui.pause.innerHTML = state === 'paused' ? '▶ <span class="restart-label">RESUME</span>' : 'Ⅱ <span class="restart-label">PAUSE</span>';
       ui.pause.setAttribute('aria-label', state === 'paused' ? 'Resume game' : 'Pause game');
       ui.status.textContent = state === 'paused' ? 'FLIGHT PAUSED' : 'FLIGHT IN PROGRESS';
-      if (state === 'paused') showOverlay('HOLDING ORBIT', 'One small break for a pilot.', 'RESUME FLIGHT →', 'PAUSED / TAKE YOUR TIME', 'PRESS P OR ENTER TO RESUME');
-      else { ui.overlay.hidden = true; canvas.focus(); }
+      if (state === 'paused') showOverlay('HOLDING ORBIT', 'One small break for a pilot.', 'RESUME FLIGHT →', 'PAUSED / TAKE YOUR TIME', 'TAP RESUME OR PRESS P / ENTER');
+      else { ui.overlay.hidden = true; canvas.focus({ preventScroll: true }); }
     }
     function burst(x, y, count) {
       for (let i = 0; i < count; i++) {
@@ -181,13 +272,12 @@
       bullets = bullets.filter(b => b.life > 0);
     }
     function update(dt) {
-      // LESSON BUG-PAUSE: projectiles advance even while the game is paused.
-      if (state === 'playing' || state === 'paused') updateBullets(dt);
       if (state !== 'playing') return;
+      updateBullets(dt);
       ship.invincible -= dt; cooldown -= dt;
-      if (keys.has('ArrowLeft') || keys.has('KeyA')) ship.angle -= 3.7 * dt;
-      if (keys.has('ArrowRight') || keys.has('KeyD')) ship.angle += 3.7 * dt;
-      if (keys.has('ArrowUp') || keys.has('KeyW')) {
+      if (pressed('ArrowLeft') || pressed('KeyA')) ship.angle -= 3.7 * dt;
+      if (pressed('ArrowRight') || pressed('KeyD')) ship.angle += 3.7 * dt;
+      if (pressed('ArrowUp') || pressed('KeyW')) {
         ship.vx += Math.cos(ship.angle) * 75 * dt; ship.vy += Math.sin(ship.angle) * 75 * dt;
         burst(ship.x - Math.cos(ship.angle) * 7, ship.y - Math.sin(ship.angle) * 7, 2);
       }
@@ -195,7 +285,7 @@
       if (speed > 115) { ship.vx *= 115 / speed; ship.vy *= 115 / speed; }
       ship.vx *= Math.pow(.99, dt * 60); ship.vy *= Math.pow(.99, dt * 60);
       ship.x = wrap(ship.x + ship.vx * dt, W); ship.y = wrap(ship.y + ship.vy * dt, H);
-      if (keys.has('Space') && cooldown <= 0) fire();
+      if (pressed('Space') && cooldown <= 0) fire();
       for (const a of asteroids) { a.x = wrap(a.x + a.vx * dt, W); a.y = wrap(a.y + a.vy * dt, H); a.angle += a.spin * dt; }
       for (let i = bullets.length - 1; i >= 0; i--) {
         const b = bullets[i], index = asteroids.findIndex(a => distance(a, b) < a.radius);
@@ -208,13 +298,14 @@
       if (ship.invincible <= 0 && asteroids.some(a => distance(a, ship) < a.radius + 4)) {
         burst(ship.x, ship.y, 65); lives--; updateHUD();
         if (lives <= 0) {
-          state = 'over'; ui.pause.disabled = true; keys.clear(); ui.status.textContent = 'SIGNAL LOST';
-          showOverlay('SPACE DUST.', `Final score: ${String(score).padStart(6, '0')} · Sector ${sector}`, 'TRY AGAIN →', 'MISSION ENDED / NICE FLYING, MOSTLY', 'PRESS ENTER TO FLY AGAIN');
+          window.rasteroidsAccount?.finishRun(score, sector);
+          state = 'over'; ui.pause.disabled = true; clearInput(); syncTouchControls(); ui.status.textContent = 'SIGNAL LOST';
+          showOverlay('SPACE DUST.', `Final score: ${String(score).padStart(6, '0')} · Sector ${sector}`, 'TRY AGAIN →', 'MISSION ENDED / NICE FLYING, MOSTLY', 'TAP TRY AGAIN OR PRESS ENTER');
         } else resetShip();
       }
       if (asteroids.length === 0) { waveDelay += dt; if (waveDelay > 1.2) { sector++; waveDelay = 0; spawnWave(); updateHUD(); } }
-      // LESSON PERF-PARTICLES: expired particles are never removed or reused.
       for (const p of particles) { p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+      particles = particles.filter(p => p.life > 0);
     }
     function drawAsteroid(a) {
       ctx.strokeStyle = '#9ca48d'; ctx.lineWidth = 1; ctx.beginPath();
@@ -231,33 +322,30 @@
       ctx.save(); ctx.translate(Math.round(ship.x), Math.round(ship.y)); ctx.rotate(ship.angle);
       ctx.strokeStyle = '#e4e8d6'; ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(8, 0); ctx.lineTo(-6, -5); ctx.lineTo(-3, 0); ctx.lineTo(-6, 5); ctx.closePath(); ctx.stroke();
-      if (state === 'playing' && (keys.has('ArrowUp') || keys.has('KeyW'))) { ctx.fillStyle = '#cbd1bc'; ctx.fillRect(-10 - Math.floor(Math.random() * 3), -1, 5, 2); }
+      if (state === 'playing' && (pressed('ArrowUp') || pressed('KeyW'))) { ctx.fillStyle = '#cbd1bc'; ctx.fillRect(-10 - Math.floor(Math.random() * 3), -1, 5, 2); }
       ctx.restore();
     }
+    const starfield = document.createElement('canvas');
+    starfield.width = W; starfield.height = H;
+    const starContext = starfield.getContext('2d');
+    starContext.fillStyle = '#10120e'; starContext.fillRect(0, 0, W, H);
+    for (let i = 0; i < 1800; i++) {
+      const shade = 19 + i % 14;
+      starContext.fillStyle = `rgb(${shade},${shade + 2},${shade - 2})`;
+      starContext.fillRect((i * 7919) % W, (i * 6271 + Math.floor(i / W) * 13) % H, 1, 1);
+    }
+    starContext.fillStyle = '#68715a';
+    for (let i = 0; i < 65; i++) starContext.fillRect((i * 137 + 23) % W, (i * 89 + 7) % H, 1, 1);
     function draw() {
       ctx.fillStyle = '#10120e'; ctx.fillRect(0, 0, W, H);
-      // LESSON PERF-BACKGROUND: rebuild, sort, and draw static scenery every frame.
-      // This does actual redundant work; there is no artificial sleep or busy wait.
-      const stars = Array.from({ length: 48000 }, (_, i) => ({ x: (i * 7919) % W, y: (i * 6271 + Math.floor(i / W) * 13) % H, shade: 19 + (i % 14) }));
-      stars.sort((a, b) => a.shade - b.shade);
-      for (const star of stars) { ctx.fillStyle = `rgb(${star.shade},${star.shade + 2},${star.shade - 2})`; ctx.fillRect(star.x, star.y, 1, 1); }
-      ctx.fillStyle = '#68715a';
-      for (let i = 0; i < 65; i++) ctx.fillRect((i * 137 + 23) % W, (i * 89 + 7) % H, 1, 1);
+      ctx.drawImage(starfield, 0, 0);
       for (const a of asteroids) drawAsteroid(a);
       for (const p of particles) {
-        // Creating a color for dead particles still costs work, even though they aren't visible.
         ctx.fillStyle = `rgb(${p.shade},${p.shade},${p.shade})`;
         if (p.life > 0) ctx.fillRect(Math.round(p.x), Math.round(p.y), 1, 1);
       }
       ctx.fillStyle = '#e4e8d6'; for (const b of bullets) ctx.fillRect(Math.round(b.x), Math.round(b.y), 2, 2);
       drawShip();
-      // A full framebuffer read/write makes the CRT grain disproportionately expensive.
-      const frame = ctx.getImageData(0, 0, W, H);
-      for (let i = 0; i < frame.data.length; i += 4) {
-        const noise = Math.random() > .5 ? 2 : -2;
-        frame.data[i] += noise; frame.data[i + 1] += noise; frame.data[i + 2] += noise;
-      }
-      ctx.putImageData(frame, 0, 0);
     }
     function tick(now) {
       const dt = Math.min((now - lastTime) / 1000, .05); lastTime = now; elapsed += dt;
@@ -268,6 +356,7 @@
     }
     const gameKeys = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'Space', 'KeyA', 'KeyD', 'KeyW', 'KeyP', 'KeyR', 'Enter'];
     window.addEventListener('keydown', event => {
+      if (event.target?.closest?.('input, textarea, select, dialog, [contenteditable=true]')) return;
       if (!gameKeys.includes(event.code) || event.altKey || event.ctrlKey || event.metaKey) return;
       if (event.target instanceof HTMLButtonElement && (event.code === 'Enter' || event.code === 'Space')) return;
       event.preventDefault();
@@ -277,13 +366,37 @@
       else keys.add(event.code);
     });
     window.addEventListener('keyup', event => keys.delete(event.code));
-    window.addEventListener('blur', () => keys.clear());
+    window.addEventListener('blur', clearInput);
+    window.addEventListener('rasteroids:profile', event => { best = Math.max(best, event.detail.best); updateHUD(); });
+    window.addEventListener('rasteroids:account-open', () => { if (state === 'playing') togglePause(); });
+    function pauseForInterruption() {
+      if (state === 'playing') togglePause();
+      else clearInput();
+    }
     document.addEventListener('visibilitychange', () => {
-      if (document.hidden) keys.clear();
+      if (document.hidden) pauseForInterruption();
     });
-    ui.launch.addEventListener('click', () => state === 'paused' ? togglePause() : startGame());
-    ui.pause.addEventListener('click', togglePause);
-    ui.restart.addEventListener('click', startGame);
+    window.addEventListener('orientationchange', pauseForInterruption);
+    window.screen?.orientation?.addEventListener('change', pauseForInterruption);
+    function bindGameAction(button, action) {
+      let handledTouch = false;
+      // Non-primary fingers do not reliably generate clicks while controls are held.
+      button.addEventListener('pointerdown', event => {
+        handledTouch = event.pointerType === 'touch';
+        if (!handledTouch || button.disabled) return;
+        event.preventDefault();
+        action();
+      });
+      button.addEventListener('click', event => {
+        // Ignore the compatibility click from a touch already handled above.
+        const alreadyHandled = handledTouch && event.detail > 0;
+        handledTouch = false;
+        if (!alreadyHandled) action();
+      });
+    }
+    bindGameAction(ui.launch, () => state === 'paused' ? togglePause() : startGame());
+    bindGameAction(ui.pause, togglePause);
+    bindGameAction(ui.restart, startGame);
     resetShip(); spawnWave(); requestAnimationFrame(tick);
   </script>
 </body>

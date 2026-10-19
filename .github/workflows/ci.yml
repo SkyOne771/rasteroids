@@ -1,0 +1,107 @@
+name: CI and deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: rasteroids-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  documentation:
+    name: Documentation and public files
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - run: python3 scripts/generate_docs.py --check
+      - run: python3 scripts/check_public_files.py
+
+  backend:
+    name: Python ${{ matrix.python }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.10', '3.12', '3.14']
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+  browser:
+    name: Game, desktop, and mobile browsers
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm test
+      - run: npm run test:browser
+      - run: npm run test:mobile
+
+  deploy:
+    name: Deploy verified main to OVH
+    needs: [documentation, backend, browser]
+    if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main' && github.repository == 'SkyOne771/rasteroids'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: production
+      url: https://vps-bbba68b4.vps.ovh.ca
+    concurrency:
+      group: production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.12'
+      - name: Package the checked commit
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: python3 scripts/package_release.py --commit "$RELEASE_COMMIT"
+      - name: Configure pinned SSH identity
+        env:
+          DEPLOY_KEY: ${{ secrets.OVH_DEPLOY_KEY }}
+          HOST_KEY: ${{ vars.OVH_HOST_KEY }}
+        run: |
+          test -n "$DEPLOY_KEY"
+          test -n "$HOST_KEY"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/rasteroids_deploy"
+          chmod 600 "$HOME/.ssh/rasteroids_deploy"
+          printf '%s\n' "$HOST_KEY" > "$HOME/.ssh/known_hosts"
+      - name: Upload and activate application release
+        env:
+          DEPLOY_HOST: ${{ vars.OVH_HOST }}
+        run: |
+          scp -i "$HOME/.ssh/rasteroids_deploy" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes release.tar.gz "rasteroids-deploy@$DEPLOY_HOST:/var/lib/rasteroids-deploy/release.tar.gz"
+          ssh -i "$HOME/.ssh/rasteroids_deploy" -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes "rasteroids-deploy@$DEPLOY_HOST" 'sudo -n /usr/local/sbin/rasteroids-deploy'
+      - name: Verify public commit and source checksums
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+        run: python3 scripts/check_deployment.py --commit "$RELEASE_COMMIT"
+      - name: Remove runner SSH key
+        if: always()
+        run: rm -f "$HOME/.ssh/rasteroids_deploy"

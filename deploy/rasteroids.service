@@ -1,0 +1,22 @@
+[Unit]
+Description=Rasteroids arcade and account API
+After=network.target
+
+[Service]
+Type=simple
+User=rasteroids
+Group=rasteroids
+WorkingDirectory=/opt/rasteroids
+ExecStart=/usr/bin/python3 /opt/rasteroids/server.py --host 127.0.0.1 --port 8000 --database /var/lib/rasteroids/rasteroids.sqlite3 --secure-cookies --trust-proxy
+Restart=on-failure
+RestartSec=3
+StateDirectory=rasteroids
+StateDirectoryMode=0700
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+
+[Install]
+WantedBy=multi-user.target

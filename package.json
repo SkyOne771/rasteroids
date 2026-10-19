@@ -1,0 +1,20 @@
+{
+  "name": "rasteroids-web",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Browser arcade with persistent pilot accounts, scores, touch controls, and automated OVH deployment",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "node --test tests/*.cjs",
+    "test:browser": "node tests/browser.mjs",
+    "test:mobile": "node tests/mobile.mjs",
+    "docs": "python3 scripts/generate_docs.py",
+    "docs:check": "python3 scripts/generate_docs.py --check",
+    "screenshots": "node scripts/capture_screenshots.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.60.0"
+  }
+}

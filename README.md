@@ -1,51 +1,124 @@
-# Rasteroids
+# Rasteroids Web
 
-A deliberately imperfect Asteroids clone for learning GitHub and LLM coding agents. One HTML file, a 480 × 300 raster canvas, monochrome pixels, and no dependencies. The game is playable; the bugs and inefficient code are exercises.
+[![CI](https://github.com/SkyOne771/rasteroids/actions/workflows/ci.yml/badge.svg)](https://github.com/SkyOne771/rasteroids/actions/workflows/ci.yml)
+[![Live demo](https://img.shields.io/badge/demo-play%20online-33452b)](https://vps-bbba68b4.vps.ovh.ca)
+
+A browser arcade with persistent pilot accounts, saved scores, a public leaderboard, and multi-touch mobile controls. The Canvas game runs in the browser; a Python standard-library server and SQLite handle accounts and flight records. The live app runs on an OVH VPS with automatic HTTPS, backups, and deployment after passing CI.
+
+**[Play the live demo](https://vps-bbba68b4.vps.ovh.ca)** · **[Architecture](docs/ARCHITECTURE.md)** · **[API and configuration](docs/REFERENCE.md)** · **[Deployment](deploy/README.md)**
+
+![Rasteroids desktop interface, with the arcade, pilot record, and scoreboard](docs/images/desktop.png)
+
+This is a portfolio extension of [Akkowicz/rasteroids](https://github.com/Akkowicz/rasteroids), originally a single-file GitHub workshop game. This fork adds the full-stack account/score system, mobile input, deployment, and automated verification. See [project attribution](NOTICE.md).
+
+## Features
+
+- Guest play, pilot registration, case-insensitive usernames, login, and persistent sessions.
+- Automatic score submission at game over, personal bests, flight history, and one best flight per pilot on the public board.
+- Four multi-touch controls: rotate left/right, thrust, and fire. Play in portrait or landscape; see the [mobile screenshot](docs/images/mobile.png).
+- Input cleanup on release, cancellation, lost capture, and focus changes; automatic pause when the page is hidden or the device rotates.
+- SQLite persistence, online backups with retention, secure cookies behind HTTPS, and per-client request limits behind the reverse proxy.
+- Python HTTP integration tests, JavaScript game regressions, desktop browser flows, and native Chromium multi-touch tests across eight screen sizes.
+- Code-generated reference documentation checked in CI, plus automatic deployment of passing `main` commits with version and asset verification.
+
+## Run locally
+
+Requires **Python 3.10+**. The application has no third-party Python dependencies and needs no frontend build.
+
+```sh
+git clone https://github.com/SkyOne771/rasteroids.git
+cd rasteroids
+python3 server.py
+```
+
+Open <http://localhost:8000>. Create a pilot account before launching if you want to save scores. Opening `index.html` directly supports offline guest play; accounts and online scores require the Python server.
+
+The default database is `data/rasteroids.sqlite3`, created automatically and excluded from Git. Customize the location or port:
+
+```sh
+python3 server.py --port 8001 --database /path/to/scores.sqlite3
+```
 
 ## Play
 
-Open `index.html` directly in a modern desktop browser. No install, build, network connection, or server is required. For a local HTTP preview:
+On mobile, hold **Left / Right**, **Thrust**, and **Fire**; multiple controls work together. Pause and restart are above the playfield. Rotate the phone for a compact landscape layout. Controls stay captured if a finger slides off a button; the rest of the page remains scrollable.
 
-```sh
-python3 -m http.server 8000
-```
-
-Then visit <http://localhost:8000>. A keyboard is required; touch controls are not implemented.
-
-| Key | Action |
+| Keyboard | Action |
 | --- | --- |
 | Enter | Start, retry, or resume |
-| ← / A and → / D | Rotate |
+| ← / A, → / D | Rotate |
 | ↑ / W | Thrust |
 | Space | Fire |
 | P | Pause / resume |
 | R | Restart |
 
-Shoot large rocks into smaller rocks. Large / medium / small rocks award 20 / 50 / 100 points. Clear a sector to advance; you have three ships and a short invulnerability window after respawning. Best score lasts for the current page session.
+Large, medium, and small rocks award 20, 50, and 100 points. Clear a sector to advance. You start with three ships and brief invulnerability after respawning. Restart abandons the current flight and resets the score; a completed flight saves at game over. Launch waits for the saved-session check so a signed-in pilot is not accidentally treated as a guest.
 
-## Workshop
+## Technical overview
 
-Pick an item from the [GitHub issue queue](https://github.com/Akkowicz/rasteroids/issues), reproduce it, and ask a coding agent to help investigate. Work on a branch, make one focused change, explain how you verified it, and open a pull request. Keep the dependency-free, single-page game intact unless an issue explicitly proposes otherwise.
+| Layer | Implementation |
+| --- | --- |
+| Game | JavaScript, Canvas 2D, animation loop, cached starfield, bounded particle lifetime |
+| Interface | HTML, CSS, Pointer Events, responsive portrait/landscape layouts |
+| Backend | Python standard library, JSON HTTP API, explicit public file allowlist |
+| Persistence | SQLite in WAL mode, account-owned flight tokens, idempotent score saves |
+| Authentication | Salted scrypt hashes; hashed opaque session tokens; HttpOnly, SameSite cookies |
+| Hosting | OVH VPS, systemd, Caddy automatic HTTPS, daily consistent SQLite snapshots |
+| Delivery | GitHub Actions checks, locked Playwright tooling, validated releases, health checks and rollback |
 
-There are **four remaining intentional defects**. Held controls are now released on window blur and when the page becomes hidden. Instructors can search `index.html` for `LESSON` to find the remaining defects; learners can start with just the issue descriptions.
+<!-- BEGIN GENERATED FACTS -->
+**Source-derived interface:** 8 API routes · 4 SQLite tables · 4 touch controls · 5 server options. [Full generated reference](docs/REFERENCE.md).
+<!-- END GENERATED FACTS -->
 
-| Tag | Intentional problem | Suggested verification |
-| --- | --- | --- |
-| [`BUG-RESTART` · #1](https://github.com/Akkowicz/rasteroids/issues/1) | Restart and retry keep the previous score. | Score a hit, restart, check for zero. |
-| [`BUG-PAUSE` · #2](https://github.com/Akkowicz/rasteroids/issues/2) | Bullets keep moving and expire while paused. | Fire, pause immediately, wait, resume. |
-| [`PERF-BACKGROUND` · #4](https://github.com/Akkowicz/rasteroids/issues/4) | Every frame allocates and sorts 48,000 stars and processes the full framebuffer. | Record a browser Performance profile; compare before/after on the same hardware. |
-| [`PERF-PARTICLES` · #5](https://github.com/Akkowicz/rasteroids/issues/5) | Expired particles accumulate and are revisited forever. | Hold thrust for a minute; inspect `particles.length` in DevTools, then release and wait. |
+The [reference](docs/REFERENCE.md) is generated from the actual Python and HTML source. CI rejects it when the runtime, tests, deployment code, or workflows change without regeneration. Explanatory prose and screenshots are reviewed alongside behavioral changes; generation cannot validate their meaning automatically.
 
-Performance varies by browser and machine. The starfield and grain perform real redundant work rather than adding an artificial delay. The FPS readout is measured. The particle leak grows with play; reloading clears it.
+## Test and maintain documentation
 
-Feature requests cover [selectable colors (#6)](https://github.com/Akkowicz/rasteroids/issues/6), [sound (#7)](https://github.com/Akkowicz/rasteroids/issues/7), and [saving high scores (#8)](https://github.com/Akkowicz/rasteroids/issues/8). Those features are deliberately absent. The interface adapts to small screens, but the game currently requires a keyboard.
+Backend and game regressions require Python and Node.js 22+:
 
-## Tests
+```sh
+python3 -m unittest discover -s tests -p 'test_*.py' -v
+npm test
+```
 
-Run `node --test tests/focus.cjs` with Node.js to verify focus-loss input cleanup, fresh input after returning, and preserved inertia. Tests execute the game script with a minimal DOM stub and require no dependencies. Also check application and browser-tab switching in a desktop browser.
+Install the locked browser tooling, then run the integration suites:
 
-## Source map
+```sh
+npm ci
+npx playwright install --with-deps chromium
+npm run test:browser
+npm run test:mobile
+```
 
-All styling, markup, rendering, input, and game logic live in `index.html`. Functions such as `startGame`, `togglePause`, `update`, and `draw` use plain JavaScript. The `assets/icon.svg` file belongs to the original repository scaffold; the game itself is self-contained.
+Browser tests start isolated temporary servers/databases and cover registration, authentication, session reload, delayed-login launches, score history, failed-save recovery, and mobile overflow. The mobile suite tests simultaneous contacts, independent releases, capture loss/cancellation, pause with controls held, orientation, minimum target sizes, normal page scrolling, and points earned by a touch-fired bullet. Some scenarios arrange collisions to test a specific state transition. `NATURAL_GAME=1 npm run test:browser` optionally plays a complete game using only player input.
 
-Created in [T3 Code](https://t3.codes).
+Touch coverage uses Chromium emulation; physical iPhone/Safari device testing is not claimed. `PLAYWRIGHT_MODULE` and `CHROMIUM_EXECUTABLE_PATH` can select an existing test installation.
+
+After changing code, regenerate and check the reference:
+
+```sh
+npm run docs
+npm run docs:check
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the complete development workflow. `npm run screenshots` refreshes the README screenshots using an empty temporary database.
+
+## Deployment and keeping the live site current
+
+Pushes and pull requests run documentation checks, Python tests, game regressions, and both browser suites. A passing push to this repository's `main` branch deploys the exact checked commit to OVH. Pull requests receive no production credentials. Failed checks prevent deployment.
+
+Releases include only allowlisted application files and checksums. A dedicated deployment account can invoke one installed helper; CI cannot replace root-owned system configuration. Deployment backs up the database and previous application files, restarts the service, and restores the previous release if its health check fails. The public [version record](https://vps-bbba68b4.vps.ovh.ca/version.json) identifies the deployed commit and public asset hashes.
+
+See [deploy/README.md](deploy/README.md) for setup, secrets, updates, backup/recovery, and operational commands.
+
+## Scope and limitations
+
+- Scores are computed in the browser. Ownership tokens, validation, and idempotency protect the API, but do not make the leaderboard cheat-proof. Prize-bearing play would need server-authoritative simulation or verified replays.
+- Pilot names are public. This edition uses username/password authentication without email verification or self-service password recovery.
+- Failed submissions remain queued in the current tab until retried. Closing/reloading that tab or signing out can discard unsaved results.
+- Daily app snapshots are stored on the VPS. Keep off-host copies for protection against complete server loss.
+- The standard-library HTTP server targets a small initial deployment behind Caddy. Larger traffic requires a production application server and shared persistence.
+
+## Attribution and licensing
+
+Original game: [Akkowicz/rasteroids](https://github.com/Akkowicz/rasteroids) and its contributors. This fork retains that history and documents its added web functionality. The upstream repository did not specify a software license; this fork does not relicense inherited code. See [NOTICE.md](NOTICE.md).

@@ -1,0 +1,11 @@
+# Replace this hostname when connecting a custom domain.
+vps-bbba68b4.vps.ovh.ca {
+	encode zstd gzip
+	request_body {
+		max_size 8KB
+	}
+	reverse_proxy 127.0.0.1:8000 {
+		# Overwrite any client-supplied header; backend trusts loopback only.
+		header_up X-Real-IP {remote_host}
+	}
+}
